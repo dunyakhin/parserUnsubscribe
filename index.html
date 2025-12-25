@@ -4,15 +4,12 @@
   <meta charset="UTF-8">
   <title>Конвертер CSV → JSON для Sendsay</title>
   <style>
-    /* Стили для оформления */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
     }
-    textarea {
-      width: 100%;
-      height: 200px;
-      margin: 10px 0;
+    .file-input {
+      margin: 20px 0;
     }
     button {
       padding: 10px 15px;
@@ -25,14 +22,17 @@
       margin-top: 20px;
       padding: 15px;
       background: #f9f9f9;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
   <h1>Конвертер CSV в JSON для Sendsay</h1>
   
-  <input type="file" id="csvFile" accept=".csv" />
-  <button onclick="convertCSV()">Конвертировать в JSON</button>
+  <div class="file-input">
+    <input type="file" id="csvFile" accept=".csv" />
+    <button onclick="convertCSV()">Конвертировать в JSON</button>
+  </div>
   
   <h2>Результат</h2>
   <div id="result"></div>
@@ -61,7 +61,7 @@
             if (values.length < 2) continue;
             
             const subscriber = {
-              email: values[0].trim(),
+              email: values[0].trim().toLowerCase(), // Приводим email к нижнему регистру
               unsub: values[1] === '1',
               system.id: "x_1758546724781206"
             };
@@ -75,14 +75,8 @@
         }
       };
       
-      reader.readAsText(fileInput.files[0]);
+      reader.readAsText(fileInput.files[0], 'windows-1251'); // Указали кодировку
     }
-  </script>
-</body>
-</html>
-
-
-
   </script>
 </body>
 </html>
