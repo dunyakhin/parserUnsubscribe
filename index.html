@@ -2,47 +2,34 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>CSV → Sendsay subscriber.update</title>
+  <title>CSV → JSON (Sendsay subscriber.update)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     button { padding: 8px 14px; margin-top: 10px; }
     pre { background: #f5f5f5; padding: 10px; margin-top: 15px; }
-    input { margin-top: 10px; }
   </style>
 </head>
 <body>
 
-<h2>Обновление статуса подписки (Sendsay)</h2>
-
-<label>
-  Login:<br>
-  <input type="text" id="login">
-</label><br>
-
-<label>
-  API key:<br>
-  <input type="password" id="apiKey">
-</label><br>
+<h2>CSV → JSON для обновления подписки (Sendsay)</h2>
 
 <input type="file" id="csvFile" accept=".csv"><br>
-<button onclick="sendToSendsay()">Загрузить и отправить</button>
+<button onclick="convert()">Сформировать JSON</button>
+<button onclick="download()" disabled id="downloadBtn">Скачать JSON</button>
 
-<h3>Ответ API</h3>
-<pre id="result"></pre>
+<h3>Результат</h3>
+<pre id="output"></pre>
 
 <script>
-function sendToSendsay() {
+let jsonResult = null;
+
+function convert() {
   const fileInput = document.getElementById('csvFile');
-  const login = document.getElementById('login').value.trim();
-  const apiKey = document.getElementById('apiKey').value.trim();
-  const result = document.getElementById('result');
+  const output = document.getElementById('output');
+  const downloadBtn = document.getElementById('downloadBtn');
 
   if (!fileInput.files.length) {
     alert('Выбери CSV файл');
-    return;
-  }
-  if (!login || !apiKey) {
-    alert('Укажи login и api_key');
     return;
   }
 
@@ -51,6 +38,7 @@ function sendToSendsay() {
     try {
       const text = e.target.result.trim();
       const lines = text.split(/\r?\n/);
+
       const delimiter = lines[0].includes(';') ? ';' : ',';
 
       const headers = lines[0]
@@ -79,35 +67,38 @@ function sendToSendsay() {
         });
       }
 
-      const body = {
+      jsonResult = {
         action: "subscriber.update",
-        login,
-        api_key: apiKey,
         list
       };
 
-      fetch('https://api.sendsay.ru/api/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
-      .then(r => r.json())
-      .then(data => {
-        result.textContent = JSON.stringify(data, null, 2);
-      })
-      .catch(err => {
-        result.textContent = 'Ошибка запроса: ' + err.message;
-      });
+      output.textContent = JSON.stringify(jsonResult, null, 2);
+      downloadBtn.disabled = false;
 
     } catch (err) {
-      result.textContent = 'Ошибка: ' + err.message;
+      output.textContent = 'Ошибка: ' + err.message;
     }
   };
 
   reader.readAsText(fileInput.files[0], 'windows-1251');
 }
+
+function download() {
+  if (!jsonResult) return;
+
+  const blob = new Blob(
+    [JSON.stringify(jsonResult, null, 2)],
+    { type: 'application/json' }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'subscriber_update.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 </body>
 </html>
-
