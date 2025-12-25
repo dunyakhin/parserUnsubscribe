@@ -2,129 +2,78 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>CSV → JSON для Sendsay</title>
+  <title>Конвертер CSV → JSON для Sendsay</title>
   <style>
+    /* Стили для оформления */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      line-height: 1.6;
     }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    textarea, input[type="file"] {
+    textarea {
       width: 100%;
-      padding: 10px;
+      height: 200px;
       margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
     }
     button {
-      background-color: #007BFF;
-      color: white;
       padding: 10px 15px;
+      background: #007BFF;
+      color: white;
       border: none;
-      border-radius: 4px;
       cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
     }
     #result {
       margin-top: 20px;
       padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background-color: #f9f9f9;
-      white-space: pre-wrap;
-      font-family: monospace;
-    }
-    .note {
-      color: #666;
-      font-size: 0.9em;
-      margin: 10px 0;
+      background: #f9f9f9;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Конвертер CSV → JSON для Sendsay</h1>
-    
-    <p class="note">
-      <strong>Требования к CSV:</strong><br>
-      - Первая строка — заголовки (например, <code>email,name</code>).<br>
-      - Обязательное поле: <code>email</code>.<br>
-      - Другие поля (например, <code>name</code>) будут добавлены в JSON как дополнительные данные.
-    </p>
-
-    <label>Загрузите CSV‑файл:</label>
-    <input type="file" id="csvFile" accept=".csv">
-
-    <label>Или вставьте CSV‑текст:</label>
-    <textarea id="csvText" rows="6" placeholder="email,name&#10;user@example.com,Иван"></textarea>
-
-    <button onclick="parseCSV()">Преобразовать в JSON</button>
-
-    <h2>Результат (JSON для subscriber/update):</h2>
-    <div id="result"></div>
-  </div>
+  <h1>Конвертер CSV в JSON для Sendsay</h1>
+  
+  <textarea placeholder="Вставьте CSV-данные&#10;EMAIL;unsub&#10;example@mail.ru;1"></textarea>
+  
+  <button onclick="convertCSV()">Конвертировать в JSON</button>
+  
+  <h2>Результат</h2>
+  <div id="result"></div>
 
   <script>
-    function parseCSV() {
-      const csvText = document.getElementById('csvText').value;
-      const fileInput = document.getElementById('csvFile');
-      let data;
-
-      // Если загружен файл
-      if (fileInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          data = parseCSVString(e.target.result);
-          displayResult(data);
-        };
-        reader.readAsText(fileInput.files[0]);
-      } 
-      // Если введён текст
-      else if (csvText) {
-        data = parseCSVString(csvText);
-        displayResult(data);
-      } 
-      else {
-        alert('Пожалуйста, загрузите файл CSV или вставьте текст.');
-      }
-    }
-
-    function parseCSVString(csv) {
-      const lines = csv.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
-      const result = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim());
-        const obj = {
-          email: values[headers.indexOf('email')],
-          unsub: true,
-          system.id: "x_1758546724781206"
-        };
-
-        // Добавляем остальные поля из CSV
-        headers.forEach((header, index) => {
-          if (header !== 'email' && values[index]) {
-            obj[header] = values[index];
-          }
-        });
-
-        result.push(obj);
-      }
-
-      return result;
-    }
-
-    function displayResult(jsonData) {
+    function convertCSV() {
+      // Получаем текст из текстовой области
+      const csvText = document.querySelector('textarea').value;
       const resultDiv = document.getElementById('result');
-      resultDiv.textContent = JSON.stringify(jsonData, null, 2);
+      
+      try {
+        // Разбиваем CSV на строки
+        const lines = csvText.split('\n');
+        const headers = lines[0].split(';');
+        const data = [];
+        
+        // Проходим по строкам
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(';');
+          
+          // Создаем объект для каждого подписчика
+          const subscriber = {
+            email: values[0].trim(),
+            unsub: values[1] === '1',
+            system.id: "x_1758546724781206"
+          };
+          
+          data.push(subscriber);
+        }
+        
+        // Выводим результат
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Ошибка при парсинге CSV: ' + error.message;
+      }
     }
+  </script>
+</body>
+</html>
+
   </script>
 </body>
 </html>
