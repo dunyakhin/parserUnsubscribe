@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <title>Конвертер CSV → JSON для Sendsay</title>
   <style>
-    /* Стили для оформления */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
     }
-    textarea {
-      width: 100%;
-      height: 200px;
-      margin: 10px 0;
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .file-input {
+      margin: 20px 0;
     }
     button {
       padding: 10px 15px;
@@ -29,50 +30,64 @@
   </style>
 </head>
 <body>
-  <h1>Конвертер CSV в JSON для Sendsay</h1>
-  
-  <textarea placeholder="Вставьте CSV-данные&#10;EMAIL;unsub&#10;example@mail.ru;1"></textarea>
-  
-  <button onclick="convertCSV()">Конвертировать в JSON</button>
-  
-  <h2>Результат</h2>
-  <div id="result"></div>
+  <div class="container">
+    <h1>Конвертер CSV в JSON для Sendsay</h1>
+    
+    <div class="file-input">
+      <input type="file" id="csvFile" accept=".csv" />
+      <button onclick="convertCSV()">Конвертировать в JSON</button>
+    </div>
+    
+    <h2>Результат</h2>
+    <div id="result"></div>
+  </div>
 
   <script>
-    function convertCSV() {
-      // Получаем текст из текстовой области
-      const csvText = document.querySelector('textarea').value;
+    async function convertCSV() {
+      const fileInput = document.getElementById('csvFile');
       const resultDiv = document.getElementById('result');
       
+      if (!fileInput.files.length) {
+        alert('Пожалуйста, выберите файл CSV');
+        return;
+      }
+
       try {
-        // Разбиваем CSV на строки
-        const lines = csvText.split('\n');
-        const headers = lines[0].split(';');
-        const data = [];
+        const file = fileInput.files[0];
+        const reader = new FileReader();
         
-        // Проходим по строкам
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(';');
+        reader.onload = function(e) {
+          const csvText = e.target.result;
+          const lines = csvText.split('\n');
+          const headers = lines[0].split(';');
+          const data = [];
           
-          // Создаем объект для каждого подписчика
-          const subscriber = {
-            email: values[0].trim(),
-            unsub: values[1] === '1',
-            system.id: "x_1758546724781206"
-          };
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(';');
+            
+            if (values.length < 2) continue;
+            
+            const subscriber = {
+              email: values[0].trim(),
+              unsub: values[1] === '1',
+              system.id: "x_1758546724781206"
+            };
+            
+            data.push(subscriber);
+          }
           
-          data.push(subscriber);
-        }
+          resultDiv.textContent = JSON.stringify(data, null, 2);
+        };
         
-        // Выводим результат
-        resultDiv.textContent = JSON.stringify(data, null, 2);
+        reader.readAsText(file);
       } catch (error) {
-        resultDiv.textContent = 'Ошибка при парсинге CSV: ' + error.message;
+        resultDiv.textContent = 'Ошибка при чтении файла: ' + error.message;
       }
     }
   </script>
 </body>
 </html>
+
 
   </script>
 </body>
