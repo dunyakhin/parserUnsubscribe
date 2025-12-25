@@ -2,81 +2,77 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Конвертер CSV → JSON для Sendsay</title>
+  <title>CSV → JSON (Sendsay subscriber/update)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .file-input {
-      margin: 20px 0;
-    }
-    button {
-      padding: 10px 15px;
-      background: #007BFF;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f9f9f9;
-      white-space: pre-wrap;
-    }
+    body { font-family: Arial; margin: 20px; }
+    button { padding: 8px 12px; }
+    pre { background: #f5f5f5; padding: 10px; }
   </style>
 </head>
 <body>
-  <h1>Конвертер CSV в JSON для Sendsay</h1>
-  
-  <div class="file-input">
-    <input type="file" id="csvFile" accept=".csv" />
-    <button onclick="convertCSV()">Конвертировать в JSON</button>
-  </div>
-  
-  <h2>Результат</h2>
-  <div id="result"></div>
 
-  <script>
-    function convertCSV() {
-      const fileInput = document.getElementById('csvFile');
-      const resultDiv = document.getElementById('result');
-      
-      if (!fileInput.files.length) {
-        alert('Пожалуйста, выберите CSV-файл');
-        return;
+<h2>CSV → JSON для Sendsay</h2>
+
+<input type="file" id="file" accept=".csv">
+<button onclick="convert()">Конвертировать</button>
+
+<h3>JSON результат</h3>
+<pre id="output"></pre>
+
+<script>
+function convert() {
+  const fileInput = document.getElementById('file');
+  const output = document.getElementById('output');
+
+  if (!fileInput.files.length) {
+    alert('Выбери CSV файл');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result.trim();
+      const lines = text.split(/\r?\n/);
+
+      // автоопределение разделителя
+      const delimiter = lines[0].includes(';') ? ';' : ',';
+
+      const headers = lines[0].split(delimiter).map(h => h.trim().toUpperCase());
+      const emailIndex = headers.indexOf('EMAIL');
+      const unsubIndex = headers.indexOf('UNSUB');
+
+      if (emailIndex === -1 || unsubIndex === -1) {
+        throw new Error('В CSV должны быть столбцы EMAIL и unsub');
       }
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const csvText = e.target.result;
-          const lines = csvText.split('\n');
-          const headers = lines[0].split(';');
-          const data = [];
-          
-          for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(';');
-            
-            if (values.length < 2) continue;
-            
-            const subscriber = {
-              email: values[0].trim().toLowerCase(), // Приводим email к нижнему регистру
-              unsub: values[1] === '1',
-              system.id: "x_1758546724781206"
-            };
-            
-            data.push(subscriber);
-          }
-          
-          resultDiv.textContent = JSON.stringify(data, null, 2);
-        } catch (error) {
-          resultDiv.textContent = 'Ошибка при обработке файла: ' + error.message;
-        }
-      };
-      
-      reader.readAsText(fileInput.files[0], 'windows-1251'); // Указали кодировку
+      const list = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].split(delimiter);
+        if (!row[emailIndex]) continue;
+
+        const email = row[emailIndex].trim().toLowerCase();
+        if (!email.includes('@')) continue;
+
+        list.push({
+          email,
+          unsub: row[unsubIndex].trim() === '1'
+        });
+      }
+
+      const result = { list };
+      output.textContent = JSON.stringify(result, null, 2);
+
+    } catch (err) {
+      output.textContent = 'Ошибка: ' + err.message;
     }
-  </script>
+  };
+
+  reader.readAsText(fileInput.files[0], 'windows-1251');
+}
+</script>
+
 </body>
 </html>
+
