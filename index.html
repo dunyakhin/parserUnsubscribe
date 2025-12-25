@@ -50,18 +50,22 @@ document.getElementById('parseBtn').addEventListener('click', () => {
 
 function parseCSVtoStoplistJSON(csvText) {
     const lines = csvText.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
+
+    // Определяем разделитель: если есть ';' в первой строке → используем ; иначе ,
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
 
     const emailIndex = headers.indexOf('email');
     const unsubIndex = headers.indexOf('unsub');
 
     if (emailIndex === -1 || unsubIndex === -1) {
-        throw new Error('CSV должен содержать столбцы "email" и "unsub"');
+        throw new Error('CSV должен содержать столбцы "email" и "unsub" (без лишних пробелов, разделитель запятая или точка с запятой)');
     }
 
     const result = [];
     for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(',').map(v => v.trim());
+        if (!lines[i].trim()) continue; // пропускаем пустые строки
+        const row = lines[i].split(delimiter).map(v => v.trim());
         if (row[unsubIndex] === '1') {
             result.push({
                 action: "stoplist.add",
