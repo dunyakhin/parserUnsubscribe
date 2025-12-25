@@ -1,104 +1,87 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>CSV → JSON (Sendsay subscriber.update)</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    button { padding: 8px 14px; margin-top: 10px; }
-    pre { background: #f5f5f5; padding: 10px; margin-top: 15px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>CSV → JSON Stoplist</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; height: 300px; margin-top: 20px; }
+        button { margin-top: 10px; padding: 10px 20px; }
+    </style>
 </head>
 <body>
 
-<h2>CSV → JSON для обновления подписки (Sendsay)</h2>
+<h2>Парсер CSV → JSON Stoplist</h2>
 
-<input type="file" id="csvFile" accept=".csv"><br>
-<button onclick="convert()">Сформировать JSON</button>
-<button onclick="download()" disabled id="downloadBtn">Скачать JSON</button>
+<input type="file" id="csvFile" accept=".csv">
+<button id="parseBtn">Парсить CSV</button>
+<button id="copyBtn" style="display:none;">Скопировать JSON</button>
 
-<h3>Результат</h3>
-<pre id="output"></pre>
+<textarea id="jsonOutput" readonly placeholder="JSON появится здесь после парсинга..."></textarea>
 
 <script>
-let jsonResult = null;
+document.getElementById('parseBtn').addEventListener('click', () => {
+    const fileInput = document.getElementById('csvFile');
+    const file = fileInput.files[0];
 
-function convert() {
-  const fileInput = document.getElementById('csvFile');
-  const output = document.getElementById('output');
-  const downloadBtn = document.getElementById('downloadBtn');
-
-  if (!fileInput.files.length) {
-    alert('Выбери CSV файл');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const text = e.target.result.trim();
-      const lines = text.split(/\r?\n/);
-
-      const delimiter = lines[0].includes(';') ? ';' : ',';
-
-      const headers = lines[0]
-        .split(delimiter)
-        .map(h => h.trim().toUpperCase());
-
-      const emailIndex = headers.indexOf('EMAIL');
-      const unsubIndex = headers.indexOf('UNSUB');
-
-      if (emailIndex === -1 || unsubIndex === -1) {
-        throw new Error('CSV должен содержать столбцы EMAIL и unsub');
-      }
-
-      const list = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(delimiter);
-        if (!row[emailIndex]) continue;
-
-        const email = row[emailIndex].trim().toLowerCase();
-        if (!email.includes('@')) continue;
-
-        list.push({
-          email,
-          unsub: row[unsubIndex].trim() === '1'
-        });
-      }
-
-      jsonResult = {
-        action: "subscriber.update",
-        list
-      };
-
-      output.textContent = JSON.stringify(jsonResult, null, 2);
-      downloadBtn.disabled = false;
-
-    } catch (err) {
-      output.textContent = 'Ошибка: ' + err.message;
+    if (!file) {
+        alert('Выберите CSV файл!');
+        return;
     }
-  };
 
-  reader.readAsText(fileInput.files[0], 'windows-1251');
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        try {
+            const jsonResult = parseCSVtoStoplistJSON(text);
+            document.getElementById('jsonOutput').value = JSON.stringify(jsonResult, null, 4);
+            if (jsonResult.length > 0) {
+                document.getElementById('copyBtn').style.display = 'inline-block';
+            } else {
+                alert('Нет записей с unsub = 1');
+                document.getElementById('copyBtn').style.display = 'none';
+            }
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+    reader.readAsText(file);
+});
+
+function parseCSVtoStoplistJSON(csvText) {
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+
+    const emailIndex = headers.indexOf('email');
+    const unsubIndex = headers.indexOf('unsub');
+
+    if (emailIndex === -1 || unsubIndex === -1) {
+        throw new Error('CSV должен содержать столбцы "email" и "unsub"');
+    }
+
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].split(',').map(v => v.trim());
+        if (row[unsubIndex] === '1') {
+            result.push({
+                action: "stoplist.add",
+                email: row[emailIndex]
+            });
+        }
+    }
+    return result;
 }
 
-function download() {
-  if (!jsonResult) return;
-
-  const blob = new Blob(
-    [JSON.stringify(jsonResult, null, 2)],
-    { type: 'application/json' }
-  );
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'subscriber_update.json';
-  a.click();
-  URL.revokeObjectURL(url);
-}
+// Кнопка для копирования JSON в буфер
+document.getElementById('copyBtn').addEventListener('click', () => {
+    const textarea = document.getElementById('jsonOutput');
+    textarea.select();
+    textarea.setSelectionRange(0, 99999); // для мобильных устройств
+    document.execCommand('copy');
+    alert('JSON скопирован в буфер обмена!');
+});
 </script>
 
 </body>
 </html>
+
