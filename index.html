@@ -1,36 +1,45 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>CSV → JSON Stoplist</title>
-<style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-textarea { width: 100%; height: 300px; margin-top: 20px; }
-button { margin-top: 10px; padding: 10px 20px; }
-</style>
+    <meta charset="UTF-8">
+    <title>CSV → JSON list</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; height: 300px; margin-top: 20px; }
+        button { margin-top: 10px; padding: 10px 20px; }
+    </style>
 </head>
 <body>
 
-<h2>Парсер CSV → JSON Stoplist</h2>
+<h2>CSV → JSON (list)</h2>
 
 <input type="file" id="csvFile" accept=".csv">
 <button id="parseBtn">Парсить CSV</button>
-<textarea id="jsonOutput" readonly placeholder="JSON объекты появятся здесь после парсинга..."></textarea>
+<button id="copyBtn" style="display:none;">Скопировать JSON</button>
+
+<textarea id="jsonOutput" readonly placeholder="JSON появится здесь..."></textarea>
 
 <script>
 document.getElementById('parseBtn').addEventListener('click', () => {
-    const fileInput = document.getElementById('csvFile');
-    const file = fileInput.files[0];
-    if (!file) { alert('Выберите CSV файл!'); return; }
+    const file = document.getElementById('csvFile').files[0];
+    if (!file) {
+        alert('Выберите CSV файл');
+        return;
+    }
 
     const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
+    reader.onload = e => {
         try {
-            const objects = parseCSVtoStoplistObjects(text);
-            const output = objects.map(o => JSON.stringify(o, null, 4)).join('\n\n');
-            document.getElementById('jsonOutput').value = output;
-            if (objects.length === 0) alert('Нет записей с unsub = 1');
+            const result = parseCSV(e.target.result);
+            document.getElementById('jsonOutput').value =
+                JSON.stringify(result, null, 4);
+
+            document.getElementById('copyBtn').style.display =
+                result.list.length ? 'inline-block' : 'none';
+
+            if (!result.list.length) {
+                alert('Нет email с unsub = 1');
+            }
         } catch (err) {
             alert(err.message);
         }
@@ -38,27 +47,44 @@ document.getElementById('parseBtn').addEventListener('click', () => {
     reader.readAsText(file);
 });
 
-function parseCSVtoStoplistObjects(csvText) {
-    const lines = csvText.trim().split('\n');
+function parseCSV(csvText) {
+    const lines = csvText.trim().split(/\r?\n/);
     const delimiter = lines[0].includes(';') ? ';' : ',';
-    const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+
+    const headers = lines[0]
+        .split(delimiter)
+        .map(h => h.trim().toLowerCase());
 
     const emailIndex = headers.indexOf('email');
     const unsubIndex = headers.indexOf('unsub');
+
     if (emailIndex === -1 || unsubIndex === -1) {
-        throw new Error('CSV должен содержать столбцы "email" и "unsub"');
+        throw new Error('CSV должен содержать столбцы email и unsub');
     }
 
-    const result = [];
+    const emails = [];
+
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
+
         const row = lines[i].split(delimiter).map(v => v.trim());
         if (row[unsubIndex] === '1') {
-            result.push({ action: "stoplist.add", email: row[emailIndex] });
+            emails.push(row[emailIndex]);
         }
     }
-    return result;
+
+    return {
+        list: emails
+    };
 }
+
+// копирование
+document.getElementById('copyBtn').addEventListener('click', () => {
+    const ta = document.getElementById('jsonOutput');
+    ta.select();
+    document.execCommand('copy');
+    alert('JSON скопирован');
+});
 </script>
 
 </body>
