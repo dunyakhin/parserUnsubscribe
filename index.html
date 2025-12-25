@@ -2,30 +2,47 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>CSV → JSON (Sendsay subscriber/update)</title>
+  <title>CSV → Sendsay subscriber.update</title>
   <style>
-    body { font-family: Arial; margin: 20px; }
-    button { padding: 8px 12px; }
-    pre { background: #f5f5f5; padding: 10px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    button { padding: 8px 14px; margin-top: 10px; }
+    pre { background: #f5f5f5; padding: 10px; margin-top: 15px; }
+    input { margin-top: 10px; }
   </style>
 </head>
 <body>
 
-<h2>CSV → JSON для Sendsay</h2>
+<h2>Обновление статуса подписки (Sendsay)</h2>
 
-<input type="file" id="file" accept=".csv">
-<button onclick="convert()">Конвертировать</button>
+<label>
+  Login:<br>
+  <input type="text" id="login">
+</label><br>
 
-<h3>JSON результат</h3>
-<pre id="output"></pre>
+<label>
+  API key:<br>
+  <input type="password" id="apiKey">
+</label><br>
+
+<input type="file" id="csvFile" accept=".csv"><br>
+<button onclick="sendToSendsay()">Загрузить и отправить</button>
+
+<h3>Ответ API</h3>
+<pre id="result"></pre>
 
 <script>
-function convert() {
-  const fileInput = document.getElementById('file');
-  const output = document.getElementById('output');
+function sendToSendsay() {
+  const fileInput = document.getElementById('csvFile');
+  const login = document.getElementById('login').value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const result = document.getElementById('result');
 
   if (!fileInput.files.length) {
     alert('Выбери CSV файл');
+    return;
+  }
+  if (!login || !apiKey) {
+    alert('Укажи login и api_key');
     return;
   }
 
@@ -34,16 +51,17 @@ function convert() {
     try {
       const text = e.target.result.trim();
       const lines = text.split(/\r?\n/);
-
-      // автоопределение разделителя
       const delimiter = lines[0].includes(';') ? ';' : ',';
 
-      const headers = lines[0].split(delimiter).map(h => h.trim().toUpperCase());
+      const headers = lines[0]
+        .split(delimiter)
+        .map(h => h.trim().toUpperCase());
+
       const emailIndex = headers.indexOf('EMAIL');
       const unsubIndex = headers.indexOf('UNSUB');
 
       if (emailIndex === -1 || unsubIndex === -1) {
-        throw new Error('В CSV должны быть столбцы EMAIL и unsub');
+        throw new Error('CSV должен содержать столбцы EMAIL и unsub');
       }
 
       const list = [];
@@ -61,11 +79,28 @@ function convert() {
         });
       }
 
-      const result = { list };
-      output.textContent = JSON.stringify(result, null, 2);
+      const body = {
+        action: "subscriber.update",
+        login,
+        api_key: apiKey,
+        list
+      };
+
+      fetch('https://api.sendsay.ru/api/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(r => r.json())
+      .then(data => {
+        result.textContent = JSON.stringify(data, null, 2);
+      })
+      .catch(err => {
+        result.textContent = 'Ошибка запроса: ' + err.message;
+      });
 
     } catch (err) {
-      output.textContent = 'Ошибка: ' + err.message;
+      result.textContent = 'Ошибка: ' + err.message;
     }
   };
 
